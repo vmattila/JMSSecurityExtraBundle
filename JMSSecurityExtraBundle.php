@@ -24,6 +24,7 @@ use JMS\SecurityExtraBundle\DependencyInjection\Compiler\DisableVotersPass;
 use JMS\SecurityExtraBundle\DependencyInjection\Compiler\AddExpressionCompilersPass;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use JMS\SecurityExtraBundle\DependencyInjection\Compiler\AddAfterInvocationProvidersPass;
+use JMS\SecurityExtraBundle\DependencyInjection\Compiler\SecurityCompatibilityPass;
 use JMS\SecurityExtraBundle\DependencyInjection\Compiler\CollectSecuredServicesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -35,7 +36,7 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
  */
 class JMSSecurityExtraBundle extends Bundle
 {
-    const VERSION = '1.4.0-DEV';
+    const VERSION = '1.5.0-DEV';
 
     public function build(ContainerBuilder $container)
     {
@@ -51,6 +52,7 @@ class JMSSecurityExtraBundle extends Bundle
         array_unshift($passes, new DisableVotersPass());
         $passConfig->setBeforeOptimizationPasses($passes);
 
+        $passConfig->addPass(new SecurityCompatibilityPass());
         $passConfig->addPass(new AddAfterInvocationProvidersPass());
         $passConfig->addPass(new CollectSecuredServicesPass());
         $passConfig->addPass(new AddExpressionCompilersPass());

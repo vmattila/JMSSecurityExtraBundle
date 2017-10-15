@@ -8,22 +8,21 @@ use Symfony\Component\Security\Acl\Domain\UserSecurityIdentity;
 
 use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
 
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use JMS\SecurityExtraBundle\Tests\Functional\TestBundle\Entity\Post;
 use JMS\SecurityExtraBundle\Annotation\PreAuthorize;
 use JMS\DiExtraBundle\Annotation as DI;
+use JMS\SecurityExtraBundle\Tests\Functional\TestBundle\TokenStorageHelper;
 
 class PostController
 {
     /** @DI\Inject */
-    private $request;
-
-    /** @DI\Inject */
     private $em;
 
-    /** @DI\Inject("security.context") */
-    private $context;
+    /** @DI\Inject(TokenStorageHelper::SERVICE) */
+    private $tokenStorage;
 
     /** @DI\Inject */
     private $router;
@@ -31,9 +30,9 @@ class PostController
     /**
      * @PreAuthorize("isAuthenticated()")
      */
-    public function newPostAction()
+    public function newPostAction(Request $request)
     {
-        if (!$title = $this->request->request->get('title')) {
+        if (!$title = $request->request->get('title')) {
             throw new HttpException(400);
         }
 
@@ -46,7 +45,7 @@ class PostController
             $oid = ObjectIdentity::fromDomainObject($post);
             $acl = $this->getAclProvider()->createAcl($oid);
 
-            $sid = UserSecurityIdentity::fromToken($this->context->getToken());
+            $sid = UserSecurityIdentity::fromToken($this->tokenStorage->getToken());
             $acl->insertObjectAce($sid, MaskBuilder::MASK_OWNER);
             $this->getAclProvider()->updateAcl($acl);
 

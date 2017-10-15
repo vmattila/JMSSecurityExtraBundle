@@ -4,6 +4,7 @@ namespace JMS\SecurityExtraBundle\Security\Authorization;
 
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AccessDecisionManagerInterface;
+use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
 
 /**
  * An introspectable access decision manager.
@@ -20,6 +21,15 @@ class RememberingAccessDecisionManager implements AccessDecisionManagerInterface
         $this->delegate = $delegate;
     }
 
+    /**
+     * Get arguments of last call to "Symfony\Component\Security\Core\Authorization\AccessDecisionManagerInterface::decide" method.
+     *
+     * Purpose of this method is to allow custom access denied handler to access arguments which lead to denial of access
+     * and to, per example, redirect to custom page or execute custom action based on those arguments to rectify made decision.
+     *
+     * @return array        Arguments of last call to "Symfony\Component\Security\Core\Authorization\AccessDecisionManagerInterface::decide" method,
+     *                      array(0 => TokenInterface $token, 1 => array $attributes, 2 => $object = null).
+     */
     public function getLastDecisionCall()
     {
         return $this->lastDecisionCall;
@@ -42,6 +52,22 @@ class RememberingAccessDecisionManager implements AccessDecisionManagerInterface
     }
 
     /**
+     * Configures the voters.
+     *
+     * @param VoterInterface[] $voters An array of VoterInterface instances
+     */
+    public function setVoters(array $voters)
+    {
+        if (!method_exists($this->delegate, 'setVoters')) {
+            $interfaceName = 'Symfony\Component\Security\Core\Authorization\AccessDecisionManagerInterface';
+
+            throw new \RuntimeException(sprintf('Decorated implementation of "%s", instance of class "%s" does not have "setVoters" which is required for development environment.', $interfaceName, get_class($this->delegate)));
+        }
+
+        $this->delegate->setVoters($voters);
+    }
+
+    /**
      * Checks if the access decision manager supports the given attribute.
      *
      * @param string $attribute An attribute
@@ -50,6 +76,10 @@ class RememberingAccessDecisionManager implements AccessDecisionManagerInterface
      */
     public function supportsAttribute($attribute)
     {
+        if (!method_exists('Symfony\Component\Security\Core\Authorization\AccessDecisionManagerInterface', 'supportsAttribute')) {
+            throw new \LogicException('AccessDecisionManagerInterface::supportsAttribute() is not available anymore in symfony 3.0.');
+        }
+
         return $this->delegate->supportsAttribute($attribute);
     }
 
@@ -62,6 +92,10 @@ class RememberingAccessDecisionManager implements AccessDecisionManagerInterface
      */
     public function supportsClass($class)
     {
+        if (!method_exists('Symfony\Component\Security\Core\Authorization\AccessDecisionManagerInterface', 'supportsClass')) {
+            throw new \LogicException('AccessDecisionManagerInterface::supportsClass() is not available anymore in symfony 3.0.');
+        }
+
         return $this->delegate->supportsClass($class);
     }
 }

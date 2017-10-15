@@ -21,7 +21,7 @@ class ExpressionVoterTest extends \PHPUnit_Framework_TestCase
     {
         $this->voter->setCacheDir(null);
 
-        $token = $this->getMock('Symfony\Component\Security\Core\Authentication\Token\TokenInterface');
+        $token = $this->getMockBuilder('Symfony\Component\Security\Core\Authentication\Token\TokenInterface')->getMock();
         $token->expects($this->once())
         ->method('getRoles')
         ->will($this->returnValue(array(new Role('ROLE_FOO'))));
@@ -31,6 +31,36 @@ class ExpressionVoterTest extends \PHPUnit_Framework_TestCase
         new \stdClass,
         array(new Expression('hasRole("ROLE_FOO")'))
         ));
+    }
+
+    /**
+     * @dataProvider getInvalidCacheContent
+     */
+    public function testVoteWithInvalidCache($content)
+    {
+        $role = 'ROLE_FOO';
+        $expression = 'hasRole("ROLE_FOO")';
+
+        $this->voter->setCacheDir($this->cacheDir);
+
+        $token = $this->getMockBuilder('Symfony\Component\Security\Core\Authentication\Token\TokenInterface')->getMock();
+        $token->expects($this->once())
+            ->method('getRoles')
+            ->will($this->returnValue(array(new Role($role))));
+
+        // emulate empty file
+        $filename = $this->cacheDir . DIRECTORY_SEPARATOR . sha1($expression) . '.php';
+        file_put_contents($filename, $content);
+
+        $this->assertNotInstanceOf('\Closure', require $filename);
+
+        $this->assertSame(VoterInterface::ACCESS_GRANTED, $this->voter->vote(
+            $token,
+            new \stdClass,
+            array(new Expression($expression))
+        ));
+
+        $this->assertInstanceOf('\Closure', require $filename);
     }
 
     /**
@@ -46,7 +76,7 @@ class ExpressionVoterTest extends \PHPUnit_Framework_TestCase
         $tests = array();
 
         $tests[] = array(
-        $this->getMock('Symfony\Component\Security\Core\Authentication\Token\TokenInterface'),
+        $this->getMockBuilder('Symfony\Component\Security\Core\Authentication\Token\TokenInterface')->getMock(),
         new \stdClass(),
         array('ROLE_FOO'),
         VoterInterface::ACCESS_ABSTAIN,
@@ -67,6 +97,20 @@ class ExpressionVoterTest extends \PHPUnit_Framework_TestCase
         array(new Expression('isAuthenticated()')),
         VoterInterface::ACCESS_DENIED,
         );
+
+        return $tests;
+    }
+
+    public function getInvalidCacheContent()
+    {
+        $tests = array();
+
+        $tests['empty'] = array('');
+        $tests['no return'] = array('<?php $i = 42;');
+        $tests['integer'] = array('<?php return 42;');
+        $tests['null'] = array('<?php return NULL;');
+        $tests['object'] = array('<?php return new \stdClass();');
+        $tests['callable string'] = array('<?php return "time";');
 
         return $tests;
     }
